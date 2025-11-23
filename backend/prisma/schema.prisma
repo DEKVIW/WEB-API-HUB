@@ -1,0 +1,209 @@
+// Prisma 数据库模型 - SQLite
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 用户模型
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts Account[]
+  preferences UserPreferences?
+  checkinHistory CheckinHistory[]
+  modelSyncHistory ModelSyncHistory[]
+
+  @@map("users")
+}
+
+// 账号模型（对应原扩展中的 SiteAccount）
+model Account {
+  id          String   @id @default(cuid())
+  userId      String
+  baseUrl     String   // site_url
+  siteName    String?  // site_name
+  siteType    String?  // site_type
+  userIdValue Int?     // account_info.id (原扩展中的 userId，整数)
+  username    String?  // account_info.username
+  accessToken String?  // account_info.access_token
+  cookie      String?  // Cookie（用于混合认证：某些站点需要 Cookie + AccessToken）
+  authType    String   @default("AccessToken") // AccessToken | Cookie | None
+  
+  // 账号基础信息（对应 account_info）
+  quota       Float?   @default(0)  // account_info.quota
+  usedQuota   Float?   @default(0)  // account_info.used_quota (历史总消耗)
+  todayPromptTokens     Int?    @default(0)  // account_info.today_prompt_tokens
+  todayCompletionTokens Int?    @default(0)  // account_info.today_completion_tokens
+  todayQuotaConsumption Float?  @default(0)  // account_info.today_quota_consumption
+  todayRequestsCount    Int?    @default(0)  // account_info.today_requests_count
+  todayIncome           Float?  @default(0)  // account_info.today_income
+  
+  // 站点信息
+  exchangeRate Float?  // 人民币与美元充值比例
+  healthStatus String? @default("unknown")  // healthy | warning | error | unknown
+  healthReason String?  // health.reason
+  
+  // 签到配置（JSON 存储为 String）
+  checkInConfig String?  // CheckInConfig 对象（JSON 字符串）
+  
+  // 其他
+  notes        String?
+  lastSyncTime BigInt?  // last_sync_time (timestamp)
+  configVersion Int?    @default(1)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokens ApiToken[]
+  groups AccountGroup[]
+
+  // 排序相关
+  sortOrder Int? @default(0) // 排序优先级
+  isPinned Boolean @default(false) // 是否置顶
+  
+  // 自动刷新配置
+  autoRefreshEnabled Boolean @default(false) // 是否启用自动刷新
+  autoRefreshInterval Int?   // 自动刷新间隔（分钟）
+
+  @@index([userId])
+  @@index([baseUrl, userIdValue])
+  @@index([userId, isPinned, sortOrder])
+  @@map("accounts")
+}
+
+// API Token 模型（对应原扩展中的 ApiToken）
+model ApiToken {
+  id          String   @id @default(cuid())
+  accountId   String
+  tokenId     Int?     // 原扩展中的 id (整数)
+  userId      Int?     // 原扩展中的 user_id
+  name        String
+  key         String
+  status      Int      @default(1)  // 原扩展中是 number，1=active, 0=disabled
+  usedQuota   Float?   @default(0)  // used_quota
+  remainQuota Float?   @default(0)  // remain_quota
+  unlimited   Boolean  @default(false)  // unlimited_quota
+  expiredTime BigInt?  // expired_time (timestamp)
+  createdTime BigInt?  // created_time (timestamp)
+  accessedTime BigInt? // accessed_time (timestamp)
+  
+  // 高级设置
+  modelLimitsEnabled Boolean? @default(false)
+  modelLimits        String?  // model_limits
+  allowIps           String?  // allow_ips
+  group              String?  // group
+  models             String?  // models (某些站点使用)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("api_tokens")
+}
+
+// 账号分组
+model AccountGroup {
+  id        String   @id @default(cuid())
+  accountId String
+  groupId   String
+  groupName String?
+  createdAt DateTime @default(now())
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("account_groups")
+}
+
+// 用户偏好设置
+model UserPreferences {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  theme    String   @default("system") // light | dark | system
+  language String   @default("zh_CN")
+  autoRefreshEnabled Boolean @default(false)
+  autoRefreshInterval Int?   // 分钟
+  
+  // 自动签到配置
+  autoCheckinEnabled Boolean @default(false)
+  autoCheckinWindowStart String?  // "08:00"
+  autoCheckinWindowEnd String?    // "22:00"
+  
+  // New API 配置
+  newApiUrl String?
+  newApiToken String?  // 加密存储
+  newApiUserId String?
+  newApiModelSyncEnabled Boolean @default(false)
+  newApiModelSyncInterval Int?  // 分钟
+  
+  // WebDAV 配置
+  webdavUrl String?
+  webdavUsername String?
+  webdavPassword String?  // 加密存储
+  webdavAutoSyncEnabled Boolean @default(false)
+  webdavAutoSyncInterval Int?  // 分钟
+  webdavSyncStrategy String? @default("merge")  // merge | upload | download
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+// 签到历史记录
+model CheckinHistory {
+  id String @id @default(cuid())
+  userId String
+  accountId String
+  accountName String
+  status String  // success | failed | alreadyChecked
+  message String?
+  executedAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([executedAt])
+  @@index([userId, executedAt])
+  @@map("checkin_history")
+}
+
+// 模型同步历史记录
+model ModelSyncHistory {
+  id String @id @default(cuid())
+  userId String
+  accountId String
+  accountName String
+  channelId Int?
+  channelName String?
+  status String  // success | failed | partial
+  message String?
+  syncedModels String?  // JSON 数组
+  oldModels String?  // JSON 数组
+  newModels String?  // JSON 数组
+  attempts Int? @default(1)
+  executedAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([executedAt])
+  @@index([userId, executedAt])
+  @@map("model_sync_history")
+}
+

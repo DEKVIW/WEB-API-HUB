@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # 后端 API 服务（使用 SQLite，无需单独的数据库容器）
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: all-api-hub-backend
+    env_file: .env
+    environment:
+      PORT: 3000
+      DATABASE_URL: file:/app/data/database.db
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - ./data:/app/data
+    networks:
+      - all-api-hub-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 前端应用
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    container_name: all-api-hub-frontend
+    env_file: .env
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - all-api-hub-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5173', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  all-api-hub-network:
+    driver: bridge
+
