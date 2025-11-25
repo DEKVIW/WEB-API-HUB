@@ -70,17 +70,17 @@ export function AccountCard({
 
         {/* 内容区域 - 标签左对齐，金额右对齐 */}
         <div className="space-y-2.5 mb-3 flex-1">
-          {/* 余额USD */}
+          {/* 账户余额USD */}
           <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200/50 dark:border-amber-800/50">
-            <span className="text-sm font-medium text-amber-700 dark:text-amber-300 shrink-0">余额</span>
+            <span className="text-sm font-medium text-amber-700 dark:text-amber-300 shrink-0">账户余额</span>
             <span className="text-base font-mono font-semibold text-amber-900 dark:text-amber-100 text-right min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
               {formatBalance(account.balance.USD, "USD")}
             </span>
           </div>
 
-          {/* 今日消耗 */}
+          {/* 历史消耗 */}
           <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border border-orange-200/50 dark:border-orange-800/50">
-            <span className="text-sm font-medium text-orange-700 dark:text-orange-300 shrink-0">消耗</span>
+            <span className="text-sm font-medium text-orange-700 dark:text-orange-300 shrink-0">历史消耗</span>
             <span className="text-base font-mono font-semibold text-orange-900 dark:text-orange-100 text-right min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
               {formatBalance(account.todayConsumption.USD, "USD")}
             </span>
@@ -88,7 +88,7 @@ export function AccountCard({
 
           {/* 今日收入 */}
           <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border border-emerald-200/50 dark:border-emerald-800/50">
-            <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300 shrink-0">收入</span>
+            <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300 shrink-0">今日收入</span>
             <span className="text-base font-mono font-semibold text-emerald-900 dark:text-emerald-100 text-right min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
               {formatBalance(account.todayIncome.USD, "USD")}
             </span>
