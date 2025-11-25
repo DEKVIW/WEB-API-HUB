@@ -252,7 +252,13 @@ export async function fetchTodayUsage(
       // 检查响应是否为 HTML
       checkResponseIsJson(result.data, apiUrl)
 
-      const logData = result.data
+      // 处理响应数据结构：可能是 { data: { items: [...] } } 或直接 { items: [...] }
+      let logData = result.data
+      if (logData.data && logData.data.items) {
+        // 响应格式：{ data: { items: [...], total: ... }, success: true }
+        logData = logData.data
+      }
+      
       const items = logData.items || []
 
     // 聚合数据
@@ -281,6 +287,33 @@ export async function fetchTodayUsage(
 }
 
 /**
+ * 从文本中提取金额
+ * @param text 包含金额的文本
+ * @param exchangeRate 汇率（人民币转美元）
+ * @returns 提取的金额信息，如果无法提取则返回 null
+ */
+function extractAmount(
+  text: string,
+  exchangeRate: number
+): { currencySymbol: string; amount: number } | null {
+  // 支持多种货币符号：$、¥、€、£ 等
+  const regex = /([\p{Sc}])\s*([\d,]+(?:\.\d+)?)/u
+  const match = text.match(regex)
+
+  if (!match) return null
+
+  const currencySymbol = match[1] // 货币符号
+  let amount = parseFloat(match[2].replace(/,/g, "")) // 数字金额，移除千分位
+
+  // 如果是人民币（¥），需要除以汇率转换为美元
+  if (currencySymbol === "¥" || currencySymbol === "￥") {
+    amount = amount / exchangeRate
+  }
+
+  return { currencySymbol, amount }
+}
+
+/**
  * 获取今日收入
  * 通过分页获取充值/系统日志并聚合
  */
@@ -304,6 +337,7 @@ export async function fetchTodayIncome(
   const maxPages = 10
 
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl)
+  const CONVERSION_FACTOR = 500000 // 内部单位转换因子：500000 = 1 美元
   
   // 获取充值日志 (type=1) 和系统日志 (type=5)
   for (const logType of ["1", "5"]) {
@@ -328,7 +362,8 @@ export async function fetchTodayIncome(
         },
         userId.toString(),
         accessToken,
-        cookie
+        cookie,
+        authType
       )
 
       if (result.status !== 200 || !result.data) {
@@ -336,22 +371,27 @@ export async function fetchTodayIncome(
       }
 
       // 检查响应是否为 HTML
-      checkResponseIsJson(result.data, apiUrl)
+      try {
+        checkResponseIsJson(result.data, apiUrl)
+      } catch (error) {
+        break
+      }
 
-      const logData = result.data
+      // 处理响应数据结构：可能是 { data: { items: [...] } } 或直接 { items: [...] }
+      let logData = result.data
+      if (logData.data && logData.data.items) {
+        logData = logData.data
+      }
+      
       const items = logData.items || []
 
       // 聚合收入
       for (const item of items) {
-        if (item.quota) {
-          totalIncome += item.quota
-        } else if (item.content) {
-          // 尝试从 content 中提取金额（如 "签到奖励 ＄10.586246 额度"）
-          const match = item.content.match(/[＄$]?(\d+\.?\d*)/)
-          if (match) {
-            const amount = parseFloat(match[1])
-            totalIncome += amount * 1000000 // 转换为内部单位
-          }
+        const itemIncome = item.quota || 
+          (CONVERSION_FACTOR * (extractAmount(item.content || "", exchangeRate)?.amount ?? 0))
+        
+        if (itemIncome > 0) {
+          totalIncome += itemIncome
         }
       }
 
