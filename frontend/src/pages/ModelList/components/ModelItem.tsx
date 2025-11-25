@@ -7,12 +7,6 @@ import {
 import { getProviderConfig } from "../../../utils/modelProviders"
 import type { ModelPricing, CalculatedPrice } from "../../../types/models"
 import toast from "react-hot-toast"
-// 简单的复制图标组件（如果不想安装 @heroicons/react）
-const DocumentDuplicateIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-  </svg>
-)
 
 interface ModelItemProps {
   model: ModelPricing
@@ -90,23 +84,52 @@ export function ModelItem({
   return (
     <Card
       variant="interactive"
-      className={`group hover:shadow-lg transition-all duration-300 min-w-[280px] ${
+      className={`group hover:shadow-lg transition-all duration-300 min-w-[280px] relative ${
         isAvailableForUser
           ? "hover:border-blue-300 dark:hover:border-blue-500/50"
           : "bg-gray-50 opacity-75 dark:bg-gray-800/50"
       }`}
     >
+      {/* 标签 - 计费模式和可用状态 - 绝对定位在右上角 */}
+      <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
+        {/* 计费模式标签 */}
+        <Badge variant={tokenBillingType ? "info" : "default"} className="text-xs whitespace-nowrap">
+          {tokenBillingType ? "按量" : "按次"}
+        </Badge>
+        
+        {/* 可用状态标签 */}
+        <Badge variant={isAvailableForUser ? "success" : "error"} className="text-xs whitespace-nowrap">
+          {isAvailableForUser ? "可用" : "不可用"}
+        </Badge>
+        
+        {/* 展开/收起按钮 */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+        >
+          {isExpanded ? (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          )}
+        </button>
+      </div>
+
       <CardContent className="p-4 md:p-5 lg:p-6">
-        {/* 头部区域 - 图标、标题和可用性在一行 */}
-        <div className="flex items-center gap-2 mb-3 flex-nowrap">
+        {/* 头部区域 - 图标和标题 */}
+        <div className="flex items-start gap-2 mb-3">
           {/* 厂商图标 */}
           <div className={`shrink-0 rounded-lg p-1.5 ${providerConfig.bgColor}`}>
             <IconComponent className={`h-5 w-5 ${providerConfig.color}`} />
           </div>
           
-          {/* 模型名称 - 可省略 */}
+          {/* 模型名称 - 优先完整显示，空间不够时才截断（最多2行） */}
           <h3
-            className={`flex-1 min-w-0 text-base font-bold cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 truncate ${
+            className={`flex-1 min-w-0 text-base font-bold cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 line-clamp-2 break-words ${
               isAvailableForUser
                 ? "text-gray-900 dark:text-white"
                 : "text-gray-500 dark:text-gray-400"
@@ -119,49 +142,6 @@ export function ModelItem({
           >
             {model.model_name}
           </h3>
-          
-          {/* 复制按钮 */}
-          <button
-            type="button"
-            onClick={(e: MouseEvent) => {
-              e.stopPropagation()
-              handleCopyModelName()
-            }}
-            className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors opacity-0 group-hover:opacity-100"
-            title="复制模型名称"
-            aria-label="复制模型名称"
-          >
-            <DocumentDuplicateIcon className="h-4 w-4" />
-          </button>
-          
-          {/* 标签 - 计费模式和可用状态 */}
-          <div className="flex shrink-0 items-center gap-1.5">
-            {/* 计费模式标签 */}
-            <Badge variant={tokenBillingType ? "info" : "default"} className="text-xs whitespace-nowrap">
-              {tokenBillingType ? "按量" : "按次"}
-            </Badge>
-            
-            {/* 可用状态标签 */}
-            <Badge variant={isAvailableForUser ? "success" : "error"} className="text-xs whitespace-nowrap">
-              {isAvailableForUser ? "可用" : "不可用"}
-            </Badge>
-          </div>
-          
-          {/* 展开/收起按钮 */}
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
-          >
-            {isExpanded ? (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-            ) : (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            )}
-          </button>
         </div>
         
         {/* 模型描述 */}

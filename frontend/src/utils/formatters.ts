@@ -7,8 +7,8 @@
  */
 export function formatBalance(amount: number, currency: "USD" | "CNY"): string {
   const symbol = currency === "USD" ? "$" : "¥"
-  // 添加千分位分隔符，提高大数字的可读性
-  const formatted = amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+  // 不添加千分位分隔符，保持原始数字格式
+  const formatted = amount.toFixed(2)
   return `${symbol}${formatted}`
 }
 
