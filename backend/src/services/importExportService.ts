@@ -43,6 +43,8 @@ export interface ExportAccount {
   authType: string
   autoRefreshEnabled?: boolean
   autoRefreshInterval?: number | null
+  sortOrder?: number | null
+  isPinned?: boolean
   tokens?: ExportToken[]
 }
 
@@ -69,7 +71,8 @@ export interface ExportToken {
  * 导出所有账号数据
  */
 export async function exportAccounts(userId: string): Promise<ExportData> {
-  const accounts = await accountStorageService.getAllAccounts(userId)
+  // 使用 sorted=true 确保按排序顺序导出
+  const accounts = await accountStorageService.getAllAccounts(userId, true)
 
   const exportAccounts: ExportAccount[] = accounts.map((account) => {
     const exportAccount: ExportAccount = {
@@ -99,7 +102,9 @@ export async function exportAccounts(userId: string): Promise<ExportData> {
       configVersion: account.configVersion || 1,
       authType: account.authType,
       autoRefreshEnabled: account.autoRefreshEnabled || false,
-      autoRefreshInterval: account.autoRefreshInterval || null
+      autoRefreshInterval: account.autoRefreshInterval || null,
+      sortOrder: account.sortOrder || null,
+      isPinned: account.isPinned || false
     }
 
     // 添加 tokens
@@ -177,7 +182,9 @@ export async function importAccounts(
           configVersion: accountData.configVersion || 1,
           authType: accountData.authType || "AccessToken",
           autoRefreshEnabled: accountData.autoRefreshEnabled ?? false,
-          autoRefreshInterval: accountData.autoRefreshInterval ?? null
+          autoRefreshInterval: accountData.autoRefreshInterval ?? null,
+          sortOrder: accountData.sortOrder ?? null,
+          isPinned: accountData.isPinned ?? false
         })
         importedCount++
         continue
@@ -202,6 +209,8 @@ export async function importAccounts(
         configVersion: accountData.configVersion || 1,
         autoRefreshEnabled: accountData.autoRefreshEnabled ?? false,
         autoRefreshInterval: accountData.autoRefreshInterval ?? null,
+        sortOrder: accountData.sortOrder ?? null,
+        isPinned: accountData.isPinned ?? false,
         tokens: accountData.tokens?.map((token) => ({
           tokenId: token.id,
           userId: token.user_id,
